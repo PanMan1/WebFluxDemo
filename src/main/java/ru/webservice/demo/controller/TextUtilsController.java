@@ -1,22 +1,15 @@
 package ru.webservice.demo.controller;
 
 
-
-import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-
-
-import java.util.Base64;
-import javax.validation.constraints.NotNull;
-
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.webservice.demo.model.Base64Request;
 import ru.webservice.demo.model.Base64Response;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import javax.validation.constraints.NotNull;
+import java.util.Base64;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 @RestController
@@ -27,13 +20,34 @@ public class TextUtilsController {
             value = "/base64Encode",
             method = RequestMethod.POST,
             produces = "application/json; charset=utf-8")
-    private Mono<Base64Response> base64Encode(
-            @RequestHeader(value = "Content-Type", required = true) MediaType contentType,
-            @RequestHeader(value ="Message-UUID", required = false) String messageUuid,
-            @RequestBody @NotNull Base64Request requestBody) throws IllegalArgumentException {
-        if (!contentType.equals(MediaType.APPLICATION_JSON))
-            throw new IllegalArgumentException("Content-Type header must be \"application/json\" !");
-        String encodedBody = new String(Base64.getEncoder().encode(requestBody.getText().getBytes()));
-        return Mono.just(new Base64Response(encodedBody));
+    private Mono<ResponseEntity<Base64Response>> base64Encode(
+            @RequestHeader(value = "Message-UUID") String messageUuid,
+            @RequestBody @NotNull Base64Request requestBody) {
+        AtomicReference<String> bodyMsg =
+                new AtomicReference<>(new String(Base64.getEncoder().encode(requestBody.getMessage().getBytes())));
+        return Mono.just(ResponseEntity.ok().header("Message-UUID", messageUuid).body(new Base64Response(bodyMsg)));
+    }
+
+    // TODO: 28.02.2020 Сделать свой эксепшн хендлер и избавиться от говнокода
+    @RequestMapping(
+            value = "/base64Decode",
+            method = RequestMethod.POST,
+            produces = "application/json; charset=utf-8")
+    private Mono<ResponseEntity<Base64Response>> base64Decode(
+            @RequestHeader(value = "Message-UUID") String messageUuid,
+            @RequestBody @NotNull Base64Request requestBody) {
+        AtomicReference<String> bodyMsg = new AtomicReference<>();
+        try {
+            bodyMsg.set(new String(Base64.getDecoder().decode(requestBody.getMessage().getBytes())));
+        } catch (NullPointerException e) {
+            bodyMsg.set("Incorrect body format! JSON example:{\"message\":\"<Your message>\"}");
+            return Mono.just(
+                    ResponseEntity
+                    .badRequest()
+                    .header("Message-UUID", messageUuid)
+                    .body(new Base64Response(bodyMsg)));
+        }
+
+        return Mono.just(ResponseEntity.ok().header("Message-UUID", messageUuid).body(new Base64Response(bodyMsg)));
     }
 }
