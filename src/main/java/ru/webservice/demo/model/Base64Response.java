@@ -1,28 +1,25 @@
 package ru.webservice.demo.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RequestHeader;
 
 import javax.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
-import java.util.concurrent.atomic.AtomicReference;
+import java.time.format.DateTimeFormatter;
 
 @Data
 @NoArgsConstructor
 public class Base64Response {
     @JsonProperty("message")
     @NotNull
-    private AtomicReference<String> message;
+    private String message;
 
     @JsonProperty("time")
     @NotNull
-    private OffsetDateTime time = OffsetDateTime.now();
+    private String time = OffsetDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME);
 
-    public Base64Response(AtomicReference<String> bodyMsg){
+    public Base64Response(String bodyMsg){
         this.message = bodyMsg;
     }
 
